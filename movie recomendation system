@@ -1,0 +1,415 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "mount_file_id": "1Mide3pqEkOtxo709c2GZHmYcFvGs5-k3",
+      "authorship_tag": "ABX9TyP7hvMUOmg6Ijy+WirUHGZt",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Bisma-Arshad140/MOVIE-RECOMMENDATION-SYSTEM/blob/main/movie%20recomendation%20system\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "pip install scikit-surprise"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "Aiu5sIJfCB_3",
+        "outputId": "6bde912f-05bc-4211-b69c-7e815947b8d9"
+      },
+      "execution_count": 3,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Requirement already satisfied: scikit-surprise in /usr/local/lib/python3.11/dist-packages (1.1.4)\n",
+            "Requirement already satisfied: joblib>=1.2.0 in /usr/local/lib/python3.11/dist-packages (from scikit-surprise) (1.4.2)\n",
+            "Requirement already satisfied: numpy>=1.19.5 in /usr/local/lib/python3.11/dist-packages (from scikit-surprise) (1.24.4)\n",
+            "Requirement already satisfied: scipy>=1.6.0 in /usr/local/lib/python3.11/dist-packages (from scikit-surprise) (1.15.2)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import pandas as pd\n",
+        "from surprise import Dataset, Reader, SVD, accuracy\n",
+        "from surprise.model_selection import train_test_split"
+      ],
+      "metadata": {
+        "id": "j9Ls23aZAeTV"
+      },
+      "execution_count": 53,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Reading .dat files with '::' separator and Latin-1 encoding\n",
+        "movies = pd.read_csv('movies.csv', sep='::', engine='python',\n",
+        "                     names=['MovieID','title','Genres'],\n",
+        "                     encoding='ISO-8859-1')\n",
+        "ratings = pd.read_csv('ratings.csv', sep='::', engine='python',\n",
+        "                      names=['UserID','MovieID','Rating','Timestamp'],\n",
+        "                      encoding='ISO-8859-1')"
+      ],
+      "metadata": {
+        "id": "C7NIRegOP3BU"
+      },
+      "execution_count": 59,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "movies = pd.read_csv('/content/movies.csv', sep=';', encoding='ISO-8859-1')\n",
+        "ratings = pd.read_csv('/content/ratings.csv', sep=';', encoding='ISO-8859-1')\n",
+        "users = pd.read_csv('/content/users.csv', sep=';', encoding='ISO-8859-1')"
+      ],
+      "metadata": {
+        "id": "JraL4x_nTPd1"
+      },
+      "execution_count": 60,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "print(\"Movies columns:\", movies.columns)\n",
+        "print(\"Ratings columns:\", ratings.columns)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "Sj5uW5LrU6Qg",
+        "outputId": "aa5839a6-8441-4a30-bb04-11465d68d9ab"
+      },
+      "execution_count": 41,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Movies columns: Index(['movieId', 'title', 'genres', ',,'], dtype='object')\n",
+            "Ratings columns: Index(['userId', 'movieId', 'rating', 'timestamp'], dtype='object')\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Isse ratings aur movies data ek saath aa jaye ga — har rating ke sath us movie ka naam aur genre bh"
+      ],
+      "metadata": {
+        "id": "fkNvAUegW_k8"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Convert both movieId columns to string (or int, dono same ho to chalega)\n",
+        "ratings['movieId'] = ratings['movieId'].astype(str)\n",
+        "movies['movieId'] = movies['movieId'].astype(str)\n",
+        "\n",
+        "# Now merge\n",
+        "data = pd.merge(ratings, movies, on='movieId')\n",
+        "print(data.head())\n",
+        "\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "em8zFgqkWJ8l",
+        "outputId": "e05f95ff-031e-4ed6-e541-7a19db05b016"
+      },
+      "execution_count": 43,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "   userId movieId  rating  timestamp                                   title  \\\n",
+            "0       1    1193       5  978300760  One Flew Over the Cuckoo's Nest (1975)   \n",
+            "1       1     661       3  978302109        James and the Giant Peach (1996)   \n",
+            "2       1     914       3  978301968                     My Fair Lady (1964)   \n",
+            "3       1    3408       4  978300275                  Erin Brockovich (2000)   \n",
+            "4       1    2355       5  978824291                    Bug's Life, A (1998)   \n",
+            "\n",
+            "                         genres  ,,  \n",
+            "0                         Drama  ,,  \n",
+            "1  Animation|Children's|Musical  ,,  \n",
+            "2               Musical|Romance  ,,  \n",
+            "3                         Drama  ,,  \n",
+            "4   Animation|Children's|Comedy   ,  \n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "CONVERT TIMESTAMP TO DATATIME"
+      ],
+      "metadata": {
+        "id": "Dx5q-o4WXT4J"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "data['timestamp'] = pd.to_datetime(data['timestamp'], unit='s')\n",
+        "print(data[['timestamp']].head())"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ppFKk2eKWn8D",
+        "outputId": "5c32ca84-f95d-47dd-f931-7dfdfdcaf10e"
+      },
+      "execution_count": 44,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "            timestamp\n",
+            "0 2000-12-31 22:12:40\n",
+            "1 2000-12-31 22:35:09\n",
+            "2 2000-12-31 22:32:48\n",
+            "3 2000-12-31 22:04:35\n",
+            "4 2001-01-06 23:38:11\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "\n",
+        "# Create a Reader object to parse the rating data\n",
+        "reader = Reader(rating_scale=(1, 5))\n",
+        "\n",
+        "# Load data\n",
+        "data = Dataset.load_from_df(ratings[['userId', 'movieId', 'rating']], reader)\n",
+        "\n",
+        "# Split data into train and test sets\n",
+        "trainset, testset = train_test_split(data, test_size=0.2)\n",
+        "\n",
+        "# Train the SVD model\n",
+        "model = SVD()\n",
+        "model.fit(trainset)\n",
+        "\n",
+        "# Make predictions on the test set\n",
+        "predictions = model.test(testset)\n",
+        "\n",
+        "# Evaluate the model\n",
+        "accuracy.rmse(predictions)\n",
+        "\n",
+        "# Predict a specific rating (for example, for user 1 and movie 50)\n",
+        "predicted_rating = model.predict(1, 50)  # User 1, Movie 50\n",
+        "print(predicted_rating)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "1Fu-yV7tXwei",
+        "outputId": "51e25ac2-90c7-4ede-eb1d-53004cf873e2"
+      },
+      "execution_count": 51,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "RMSE: 0.8737\n",
+            "user: 1          item: 50         r_ui = None   est = 3.70   {'was_impossible': False}\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "MAKE SPECIFIC PREDICTION FOR USER AND **MOVIE**"
+      ],
+      "metadata": {
+        "id": "pBKtHEgOhfLD"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Predict a rating for user 1 and movie 50\n",
+        "predicted_rating = model.predict(1, 50)  # User 1, Movie 50\n",
+        "print(f\"Predicted Rating for User 1 and Movie 50: {predicted_rating.est:.2f}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "U-Z4PCXpYh3I",
+        "outputId": "c4bcb567-21be-4610-8a83-0e084684dcbf"
+      },
+      "execution_count": 61,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Predicted Rating for User 1 and Movie 50: 3.70\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "**GENERATE TOP-N MOVIE RECOMMADATION FOR A USER**"
+      ],
+      "metadata": {
+        "id": "yQ9L6DFKiEME"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Function to get top N recommendations\n",
+        "def get_top_n(predictions, n=10):\n",
+        "    top_n = {}\n",
+        "    for uid, iid, true_r, est, _ in predictions:\n",
+        "        if uid not in top_n:\n",
+        "            top_n[uid] = []\n",
+        "        top_n[uid].append((iid, est))\n",
+        "\n",
+        "    for uid, user_ratings in top_n.items():\n",
+        "        user_ratings.sort(key=lambda x: x[1], reverse=True)\n",
+        "        top_n[uid] = user_ratings[:n]\n",
+        "\n",
+        "    return top_n\n",
+        "\n",
+        "# Get the top 10 recommendations for user 1\n",
+        "top_n = get_top_n(predictions, n=10)\n",
+        "\n",
+        "# Print the top 10 recommended movie IDs for user 1\n",
+        "print(\"Top 10 recommended movie IDs for user 1:\")\n",
+        "for movie_id, rating in top_n[1]:\n",
+        "    print(f\"Movie ID: {movie_id}, Predicted Rating: {rating:.2f}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "gUi7UhsAh9D4",
+        "outputId": "0e7b35a7-e65b-4b7f-bf71-733f53909962"
+      },
+      "execution_count": 62,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Top 10 recommended movie IDs for user 1:\n",
+            "Movie ID: 1197, Predicted Rating: 4.53\n",
+            "Movie ID: 2028, Predicted Rating: 4.53\n",
+            "Movie ID: 2355, Predicted Rating: 4.23\n",
+            "Movie ID: 1907, Predicted Rating: 4.07\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Assuming you have a 'movies' DataFrame with 'movieId' and 'title'\n",
+        "movie_titles = {movieId: title for movieId, title in zip(movies['movieId'], movies['title'])}\n",
+        "\n",
+        "# Print top 10 movie titles for user 1\n",
+        "print(\"Top 10 recommended movies for user 1:\")\n",
+        "for movie_id, rating in top_n[1]:\n",
+        "    movie_title = movie_titles.get(movie_id, \"Unknown Movie\")\n",
+        "    print(f\"Movie: {movie_title}, Predicted Rating: {rating:.2f}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "DsN5cH2oiR1w",
+        "outputId": "f0d1222c-27dd-4138-ec86-0d1ac41eb325"
+      },
+      "execution_count": 63,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Top 10 recommended movies for user 1:\n",
+            "Movie: Princess Bride, The (1987), Predicted Rating: 4.53\n",
+            "Movie: Saving Private Ryan (1998), Predicted Rating: 4.53\n",
+            "Movie: Bug's Life, A (1998), Predicted Rating: 4.23\n",
+            "Movie: Mulan (1998), Predicted Rating: 4.07\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Save recommendations to a DataFrame\n",
+        "recommendations = []\n",
+        "for movie_id, rating in top_n[1]:\n",
+        "    movie_title = movie_titles.get(movie_id, \"Unknown Movie\")\n",
+        "    recommendations.append([1, movie_title, rating])  # Assuming user 1\n",
+        "\n",
+        "# Convert to DataFrame\n",
+        "recommendations_df = pd.DataFrame(recommendations, columns=['UserID', 'MovieTitle', 'PredictedRating'])\n",
+        "\n",
+        "# Save to CSV\n",
+        "recommendations_df.to_csv('user_1_recommendations.csv', index=False)"
+      ],
+      "metadata": {
+        "id": "DSNjWsPzie0D"
+      },
+      "execution_count": 64,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "s5gNRDUmi0l5"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
